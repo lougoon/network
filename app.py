@@ -68,18 +68,18 @@ def build_plotly_network(G, pos, node_layers, selected_layers, selected_sub_laye
 # === Fonction pour afficher les colonnes d'un nœud ===
 def display_columns_table(node_data):
     if node_data:
-        st.subheader(f"📋 Colonnes de `{node_data['id']}`")
+        st.subheader(f"📋 Champs de `{node_data['id']}`")
         max_len = max(len(node_data["columns"]), len(node_data["columns_source"]))
         cols_padded = node_data["columns"] + [""] * (max_len - len(node_data["columns"]))
         cols_src_padded = node_data["columns_source"] + [""] * (max_len - len(node_data["columns_source"]))
-        df_cols = pd.DataFrame({"Colonnes": cols_padded, "Colonnes Source": cols_src_padded})
+        df_cols = pd.DataFrame({"Champs (target_field)": cols_padded, "Champs Source (source_field)": cols_src_padded})
         st.dataframe(df_cols, use_container_width=True)
 
 # === Application Streamlit ===
 st.set_page_config(layout="wide", page_title="Réseau DB - NetworkX + Plotly")
 st.title("📊 Réseau de Tables - Database Lineage (NetworkX + Plotly)")
 
-# Charger le JSON
+# Charger le JSON (issu de la nouvelle version avec target_table, source_table, etc.)
 with open("network.json", "r", encoding="utf-8") as f:
     network_json = json.load(f)
 
@@ -92,8 +92,8 @@ for node in network_json["nodes"]:
     node_layers[node["id"]] = {
         "layer": node["layer"],
         "sub_layer": node["sub_layer"],
-        "columns": node["columns"],
-        "columns_source": node["columns_source"]
+        "columns": node["columns"],  # target_field
+        "columns_source": node["columns_source"]  # source_field
     }
 
 for edge in network_json["edges"]:
@@ -112,7 +112,7 @@ selected_sub_layers = st.sidebar.multiselect("Sub-layers :", options=sub_layers,
 fig, node_ids = build_plotly_network(G, pos, node_layers, selected_layers, selected_sub_layers)
 selected_points = plotly_events(fig, click_event=True, hover_event=False)
 
-# --- Sélection par clic ---
+# --- Sélection par clic sur un nœud ---
 if selected_points:
     clicked_idx = selected_points[0]["pointIndex"]
     clicked_node_id = node_ids[clicked_idx]
@@ -122,8 +122,9 @@ if selected_points:
 
 # --- Sélecteur manuel en complément ---
 node_ids_all = sorted([n["id"] for n in network_json["nodes"]])
-selected_node_sidebar = st.sidebar.selectbox("🔍 Sélection manuelle d'un nœud :", options=[""] + node_ids_all)
+selected_node_sidebar = st.sidebar.selectbox("🔍 Sélection manuelle d'une table :", options=[""] + node_ids_all)
 
 if selected_node_sidebar:
     node_data = next((n for n in network_json["nodes"] if n["id"] == selected_node_sidebar), None)
     display_columns_table(node_data)
+
